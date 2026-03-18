@@ -55,28 +55,55 @@ def create_app(registry):
             }
         return jsonify(result)
 
+    @app.route("/api/devices/<name>")
+    def get_device(name):
+        if name not in registry:
+            return jsonify({"error": f"デバイス '{name}' が見つかりません"}), 404
+        info = registry[name]
+        return jsonify({
+            "name": name,
+            "type": info["type"],
+            "category": info["category"],
+            "state": info["get_state"](),
+            "actions": list(info["actions"].keys()),
+        })
+
     @app.route("/api/devices/<name>/action", methods=["POST"])
     def device_action(name):
         if name not in registry:
-            return jsonify({"error": f"Device '{name}' not found"}), 404
+            return jsonify({"error": f"デバイス '{name}' が見つかりません"}), 404
 
+        info = registry[name]
         data = request.get_json(silent=True) or {}
         action = data.get("action")
 
-        if action not in registry[name]["actions"]:
-            return jsonify({"error": f"Unknown action '{action}'"}), 400
+        if not action:
+            return jsonify({"error": "'action' を指定してください"}), 400
+        if action not in info["actions"]:
+            return jsonify({
+                "error": f"不明なアクション '{action}'",
+                "available": list(info["actions"].keys()),
+            }), 400
 
-        # アクション実行
-        value = data.get("value")
-        if value is not None:
-            registry[name]["actions"][action](value)
-        else:
-            registry[name]["actions"][action]()
-
-        return jsonify({"ok": True, "state": registry[name]["get_state"]()})
+        try:
+            value = data.get("value")
+            if value is not None:
+                info["actions"][action](value)
+            else:
+                info["actions"][action]()
+            return jsonify({
+                "ok": True,
+                "device": name,
+                "action": action,
+                "state": info["get_state"](),
+            })
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     return app
 ```
+
+> **Note:** エラーレスポンスには利用可能なアクションの一覧（`available`）を含めています。これにより、クライアント側で「どの操作ができるか」を動的に取得できます。
 
 ### デバイスレジストリとの連携
 
