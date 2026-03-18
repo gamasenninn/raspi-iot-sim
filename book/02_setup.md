@@ -373,14 +373,23 @@ python3 -m venv venv
 
 ### 正しい停止手順
 
+プロジェクトには停止用スクリプトが用意されています。
+
 ```powershell
-# 1. 仮想Raspberry Piをシャットダウン
+cd C:\app\RASPI
+.\stop.ps1
+```
+
+このスクリプトは以下を自動で行います：
+1. SSHで仮想Raspberry Piに `shutdown now` を送信
+2. 10秒待機（シャットダウン完了を待つ）
+3. Docker Compose停止
+
+手動で行う場合は以下の通りです。
+
+```powershell
 ssh -o StrictHostKeyChecking=no -p 2222 root@localhost "shutdown now"
-
-# 2. 10秒待つ
 Start-Sleep 10
-
-# 3. Docker Compose停止
 docker compose down
 ```
 
@@ -397,18 +406,63 @@ docker run --rm -it -v "$PWD\dist:/dist" ptrsr/pi-ci resize 4G
 
 ただし、仮想Raspberry Pi内にインストールしたパッケージやファイルはすべて失われます。
 
-## 2.10 2回目以降のクイックスタート
+## 2.10 自動化スクリプト
 
-一度セットアップが完了したら、次回以降の起動は簡単です。
+本書のプロジェクトには、環境の起動・プロビジョニング・停止を自動化するPowerShellスクリプトが付属しています。
+
+| スクリプト | 用途 |
+|-----------|------|
+| `start.ps1` | PI-CI初期化（初回のみ）+ Mosquitto起動 + Pi VM起動 |
+| `provision.ps1` | Pi VMへのアプリ転送 + Python環境セットアップ（自動待機付き） |
+| `stop.ps1` | Pi VM安全シャットダウン + Docker Compose停止 |
+
+### 初回セットアップの場合
 
 ```powershell
 cd C:\app\RASPI
-docker compose up -d mosquitto    # Mosquitto起動（バックグラウンド）
-docker compose up raspi            # 仮想Raspberry Pi起動
 
-# 別のPowerShellで：
+# ウィンドウ1: 環境起動（初回はPI-CI初期化も行う）
+.\start.ps1
+
+# ウィンドウ2: アプリ転送+セットアップ（Pi VM起動を自動待機）
+.\provision.ps1
+
+# ウィンドウ3: アプリ起動
 ssh -o StrictHostKeyChecking=no -p 2222 root@localhost
 cd /opt/iot-app && ./venv/bin/python main.py
+```
+
+`provision.ps1` は以下を自動で行います：
+
+1. Pi VMのSSH接続可能を最大150秒待機
+2. システムパッケージのインストール（`python3-pip`, `python3-venv`, `mosquitto-clients`）
+3. `app/` フォルダ内の全ファイルを Pi VM の `/opt/iot-app/` に転送
+4. Python仮想環境の作成と依存パッケージのインストール
+
+### 2回目以降のクイックスタート
+
+```powershell
+cd C:\app\RASPI
+
+# ウィンドウ1: 起動（初期化はスキップされる）
+.\start.ps1
+
+# ウィンドウ2: アプリ起動（環境は前回の状態が維持されている）
+ssh -o StrictHostKeyChecking=no -p 2222 root@localhost
+cd /opt/iot-app && ./venv/bin/python main.py
+```
+
+2回目以降は、Pi VMのディスクイメージに前回の環境が保存されているため、`provision.ps1` の再実行は不要です。ただし、`app/` フォルダのファイルを更新した場合は、再度転送が必要です。
+
+```powershell
+# ファイル更新時のみ再転送
+scp -o StrictHostKeyChecking=no -P 2222 -r ./app/* root@localhost:/opt/iot-app/
+```
+
+### 停止
+
+```powershell
+.\stop.ps1
 ```
 
 ## 2.11 この章のまとめ

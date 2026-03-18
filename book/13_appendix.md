@@ -105,7 +105,15 @@ docker exec mosquitto mosquitto_sub -t "iot/devices/#" -C 5
 docker exec mosquitto sh -c "mosquitto_pub -t 'iot/devices/led_red/command' -m '{\"action\":\"on\"}'"
 ```
 
-### B.5 テスト
+### B.5 自動化スクリプト
+
+```powershell
+.\start.ps1       # 環境起動（初回はPI-CI初期化も実行）
+.\provision.ps1   # Pi VMへのアプリ転送 + Python環境セットアップ
+.\stop.ps1        # Pi VM安全シャットダウン + Docker Compose停止
+```
+
+### B.6 テスト
 
 ```powershell
 python -m pytest tests/ -v              # 全テスト
@@ -201,11 +209,16 @@ python -m pytest tests/ -k "test_led"   # LED関連テストのみ
 | test_rest_api.py | 13 |
 | test_mqtt_integration.py | 3 |
 | test_e2e.py | 5 |
-| **合計** | **63** |
+| **合計** | **66** |
 
-### インフラ
+### インフラ・スクリプト
 | ファイル | 説明 |
 |---------|------|
 | docker-compose.yml | Docker定義 |
 | mosquitto/config/mosquitto.conf | MQTT設定 |
 | dashboard/index.html | Webダッシュボード |
+| start.ps1 | 環境起動スクリプト (PowerShell) |
+| provision.ps1 | アプリ転送+セットアップ (PowerShell) |
+| stop.ps1 | 安全停止スクリプト (PowerShell) |
+| pytest.ini | テスト設定 |
+| .gitignore | Git除外設定 |
