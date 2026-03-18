@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+dist/
+mosquitto/data/
+mosquitto/log/
+.pytest_cache/
