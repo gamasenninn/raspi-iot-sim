@@ -180,6 +180,42 @@ def test_publish_and_subscribe(self):
 
 E2Eテストは、実際のMQTTメッセージを使って「コマンド送信→デバイス状態変化→テレメトリ確認」の全フローを検証します。
 
+### docker exec 方式
+
+E2Eテストでは、WindowsホストのPythonクライアントからではなく、**`docker exec` 経由で Mosquitto コンテナ内の `mosquitto_pub`/`mosquitto_sub` コマンドを使用**しています。
+
+```python
+import subprocess
+
+def send_command(device, action, value=None):
+    """docker exec 経由でMQTTコマンドを送信"""
+    payload = {"action": action}
+    if value is not None:
+        payload["value"] = str(value)
+    subprocess.run(
+        ["docker", "exec", "mosquitto", "mosquitto_pub",
+         "-t", f"iot/devices/{device}/command", "-m", json.dumps(payload)],
+        capture_output=True, timeout=5,
+    )
+
+def wait_for_state(topic, condition_fn, timeout=10):
+    """docker exec 経由で mosquitto_sub を実行し、条件を満たすメッセージを待つ"""
+    r = subprocess.run(
+        ["docker", "exec", "mosquitto", "mosquitto_sub",
+         "-t", topic, "-C", "5", "-W", str(timeout)],
+        capture_output=True, text=True, timeout=timeout + 5,
+    )
+    for line in r.stdout.strip().split("\n"):
+        data = json.loads(line)
+        if condition_fn(data):
+            return data
+    return None
+```
+
+> **Note:** なぜ docker exec を使うのか？ Docker Desktop のネットワーキングでは、Pi VM → Mosquitto → Windowsホスト のルートで、Pi VMからpublishされたメッセージがWindowsホスト側のPython MQTTクライアント（`paho-mqtt`）に配信されない場合があります。`docker exec` でMosquittoコンテナ内から直接操作することで、この制約を回避しています。
+
+### テストの例
+
 ```python
 def test_led_on_command_changes_state(self):
     send_command("led_red", "on")
@@ -193,7 +229,7 @@ def test_led_on_command_changes_state(self):
 
 ### 自動スキップ
 
-E2Eテストは全スタック（Pi VM + Mosquitto）が稼働中でないと実行できません。`conftest.py` で稼働チェックを行い、未稼働時は自動的にスキップします。
+E2Eテストは全スタック（Pi VM + Mosquitto）が稼働中でないと実行できません。テスト実行前に `docker exec` でテレメトリを受信できるか確認し、受信できない場合は自動的にスキップします。
 
 ## 11.7 テストの実行
 

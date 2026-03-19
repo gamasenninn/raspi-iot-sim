@@ -138,7 +138,7 @@ raspi:
 MQTTブローカーの設定ファイルを作成します。
 
 ```powershell
-mkdir -p C:\app\RASPI\mosquitto\config
+mkdir C:\app\RASPI\mosquitto\config -Force
 ```
 
 `C:\app\RASPI\mosquitto\config\mosquitto.conf` を以下の内容で作成します。

@@ -97,12 +97,20 @@ iot/devices/{デバイス名}/command   ← コマンド（ブローカー→デ
 
 Pythonでは `paho-mqtt` ライブラリを使用します。
 
+> **Warning:** paho-mqttはバージョン2.0でAPIが大幅に変更されました。本書ではバージョン1.x系を使用しています。`requirements.txt` で `paho-mqtt>=1.6,<2.0` とバージョンを固定しているため、本書のコードはそのまま動作します。`pip install paho-mqtt` で直接インストールする場合は、必ずバージョンを指定してください。
+>
+> ```powershell
+> pip install "paho-mqtt>=1.6,<2.0"
+> ```
+>
+> バージョン2.0以降では `mqtt.Client()` のコンストラクタに `callback_api_version` パラメータが必須となり、コールバック関数の引数も変更されています。バージョンを指定せずにインストールするとv2.x系がインストールされ、本書のコードは `TypeError` で動作しません。
+
 ### 基本的な使い方
 
 ```python
 import paho.mqtt.client as mqtt
 
-# クライアントの作成と接続
+# クライアントの作成と接続（paho-mqtt v1.x系）
 client = mqtt.Client(client_id="my-sensor")
 client.connect("mosquitto", 1883, 60)
 
