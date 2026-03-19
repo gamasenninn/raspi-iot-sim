@@ -74,6 +74,8 @@ def evaluate_transition(t_val, h_val, s_val):
     elif current_state == "RECOVERY":
         if t_val < 24 and h_val < 65 and s_val > 55:
             transition("MONITORING", "recovered")
+        elif t_val > 27:
+            transition("EMERGENCY", "relapse")
 ```
 
 ### ヒステリシスの適用
