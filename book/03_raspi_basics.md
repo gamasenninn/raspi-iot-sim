@@ -144,6 +144,27 @@ Device.pin_factory = MockFactory(pin_class=MockPWMPin)
 
 方法2を推奨する理由は、MockPWMPinを明示的に指定できるためです。環境変数だけの場合、デフォルトのMockPin（PWM非対応）が使われ、サーボやPWM LEDでエラーが発生します。
 
+### デモプログラムで両方を設定している理由
+
+本書のデモプログラムでは、環境変数と `Device.pin_factory` の両方を設定しています。
+
+```python
+os.environ["GPIOZERO_PIN_FACTORY"] = "mock"                  # ①
+Device.pin_factory = MockFactory(pin_class=MockPWMPin)        # ②
+```
+
+`Device.pin_factory` を設定すると環境変数は無視されるため、技術的には②だけで十分です。しかし、本書のメインアプリ（`factory.py`）では環境変数の値を見て MockFactory を初期化するかどうかを判断しています。
+
+```python
+# factory.py の init_mock_factory()
+if os.environ.get("GPIOZERO_PIN_FACTORY") == "mock":
+    Device.pin_factory = MockFactory(pin_class=MockPWMPin)
+```
+
+デモプログラムは `factory.py` を経由せず独立して動作するため、②で直接 MockFactory を設定しています。①はデモの冒頭で「これはシミュレーション環境です」という意図を明示するマーカーとして残しています。
+
+実機に移行する際は、①と②の両方を削除すれば、gpiozero が自動的に実機のピンファクトリを使用します。
+
 ## 3.5 入力デバイスのシミュレーション
 
 出力デバイス（LED等）は状態の読み取りだけでシミュレーションできますが、入力デバイス（ボタン等）は「外部からの入力」をシミュレーションする必要があります。
