@@ -157,12 +157,12 @@ curl -X POST http://localhost:5000/api/devices/servo/action \
 
 存在しないデバイスへのアクセス:
 ```json
-{"error": "Device 'nonexistent' not found"}  // 404
+{"error": "デバイス 'nonexistent' が見つかりません"}  // 404
 ```
 
 不正なアクション:
 ```json
-{"error": "Unknown action 'fly'", "available": ["on", "off", "toggle"]}  // 400
+{"error": "不明なアクション 'fly'", "available": ["on", "off", "toggle"]}  // 400
 ```
 
 利用可能なアクションの一覧が返されるため、クライアント側でのデバッグが容易です。
